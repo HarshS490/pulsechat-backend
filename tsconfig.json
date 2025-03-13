@@ -12,5 +12,5 @@
       "types": ["node"]
     },
     "include": ["src"],
-    "exclude": ["node_modules","READEME.md",".env",".gitignore"]
+    "exclude": ["node_modules","READEME.md",".gitignore"]
   }

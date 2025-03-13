@@ -1,0 +1,93 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            String    @id @default(cuid()) @db.VarChar(30)
+  name          String?   @db.VarChar(200)
+  email         String    @unique
+  image         String?
+  provider      String
+  oauth_id      String
+
+  friendsWith User[] @relation("Friends")
+  friendOf    User[] @relation("Friends")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  conversations ConversationsOnUsers[]
+
+  requestSent     FriendRequest[] @relation("FriendRequestsSent")
+  requestRecieved FriendRequest[] @relation("FriendRequestsReceived")
+
+  seenMessages Message[] @relation("seen")
+}
+
+enum FriendRequestStatus {
+  accepted
+  declined
+  pending
+}
+
+model FriendRequest {
+  id         Int                 @id @default(autoincrement())
+  senderId   String              @db.VarChar(30)
+  receiverId String              @db.VarChar(30)
+  sender     User                @relation("FriendRequestsSent", fields: [senderId], references: [id])
+  receiver   User                @relation("FriendRequestsReceived", fields: [receiverId], references: [id])
+  status     FriendRequestStatus @default(pending)
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+}
+
+model ConversationsOnUsers {
+  user           User         @relation(fields: [userId], references: [id])
+  userId         String       @db.VarChar(30)
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  conversationId String       @db.Uuid
+
+  @@id([userId, conversationId])
+}
+
+model Conversation {
+  id            String                 @id @default(uuid()) @db.Uuid
+  name          String?
+  isGroup       Boolean?               @default(false)
+  image         String?
+  users         ConversationsOnUsers[]
+  createdAt     DateTime               @default(now())
+  lastMessageAt DateTime               @default(now())
+  messages       Message[]
+
+  @@index([createdAt])
+}
+
+model Message {
+  id        String  @id @default(uuid())
+  body      String?
+  image     String?
+  public_id String?
+
+  seenBy User[] @relation("seen")
+
+  conversationId String       @db.Uuid
+  Conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  isEdited  Boolean?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+}
