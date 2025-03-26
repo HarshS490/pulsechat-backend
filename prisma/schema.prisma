@@ -8,12 +8,12 @@ generator client {
 }
 
 model User {
-  id            String    @id @default(cuid()) @db.VarChar(30)
-  name          String?   @db.VarChar(200)
-  email         String    @unique
-  image         String?
-  provider      String
-  oauth_id      String
+  id       String  @id @default(cuid()) @db.VarChar(30)
+  name     String? @db.VarChar(200)
+  email    String  @unique
+  image    String?
+  provider String
+  oauth_id String
 
   friendsWith User[] @relation("Friends")
   friendOf    User[] @relation("Friends")
@@ -27,6 +27,8 @@ model User {
   requestRecieved FriendRequest[] @relation("FriendRequestsReceived")
 
   seenMessages Message[] @relation("seen")
+
+  messages Message[] @relation("sent_messages")
 }
 
 enum FriendRequestStatus {
@@ -63,7 +65,7 @@ model Conversation {
   users         ConversationsOnUsers[]
   createdAt     DateTime               @default(now())
   lastMessageAt DateTime               @default(now())
-  messages       Message[]
+  messages      Message[]
 
   @@index([createdAt])
 }
@@ -73,8 +75,9 @@ model Message {
   body      String?
   image     String?
   public_id String?
-
-  seenBy User[] @relation("seen")
+  seenBy    User[]  @relation("seen")
+  userId    String  @db.VarChar(30)
+  createdBy User    @relation("sent_messages", fields: [userId], references: [id])
 
   conversationId String       @db.Uuid
   Conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
@@ -82,6 +85,8 @@ model Message {
   isEdited  Boolean?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([createdAt])
 }
 
 model VerificationToken {
