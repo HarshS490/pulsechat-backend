@@ -1,8 +1,7 @@
 import { Request, Response } from "express";
 import { prisma } from "../config/prisma.js";
-import { User } from "@prisma/client";
 import jwt from "jsonwebtoken";
-import { AccountData, UserData } from "../models/auth.schemas.js";
+
 
 interface LoginPayloadType {
   name: string;
@@ -16,47 +15,76 @@ class AuthController {
   static async login(request: Request, response: Response) {
     try {
       const body: LoginPayloadType = request.body;
-      let findUser = await prisma.user.findUnique({
+      let existingUser = await prisma.user.findUnique({
         where: {
           email: body.email,
         },
+        include: {
+          conversations: true,
+        },
       });
-      if (!findUser) {
-        findUser = await prisma.user.create({
-          data: body,
-        });
 
-        const conversation = await prisma.conversation.create({
+      let user;
+      if (!existingUser) {
+        user = await prisma.user.create({
           data: {
-            isGroup: false,
-            users: {
+            ...body,
+            conversations: {
               create: {
-                user: {
-                  connect: {
-                    id: findUser.id,
+                conversation: {
+                  create: {
+                    isGroup: false,
                   },
                 },
               },
             },
           },
         });
+        // console.log(user);
+      } else {
+        if (existingUser.conversations.length === 0) {
+          const newConversation = await prisma.conversation.create({
+            data: {
+              isGroup: false,
+              users: {
+                create: {
+                  user: {
+                    connect: {
+                      id: existingUser.id,
+                    },
+                  },
+                },
+              },
+            },
+          });
+        }
+        user = {
+          name: existingUser.name,
+          id: existingUser.id,
+          email: existingUser.email,
+          image: existingUser.image,
+          provider: existingUser.provider,
+          oauth_id: existingUser.oauth_id,
+          createdAt: existingUser.createdAt,
+          updatedAt: existingUser.updatedAt,
+        };
       }
 
       let JWTPayload: AuthUser = {
         name: body.name,
         email: body.email,
         image: body.image,
-        id: findUser.id,
+        id: user.id,
       };
 
       const token = jwt.sign(JWTPayload, process.env.JWT_SECRET as string, {
-        expiresIn: "30d",
+        expiresIn: "10d",
       });
 
       return response.json({
         message: "Logged in Sucessfully!",
         user: {
-          ...findUser,
+          ...user,
           token: `Bearer ${token}`,
         },
       });
