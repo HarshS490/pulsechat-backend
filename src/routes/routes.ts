@@ -9,7 +9,7 @@ const router = Router();
 router.post("/auth/login", AuthController.login);
 
 router.post("/new/chat", authMiddleWare, ConversationController.create);
-router.get("/chats/all",ConversationController.getConversations);
+router.get("/chats/all",authMiddleWare,ConversationController.getConversations);
 
 router.get("/users/all",UserController.getAllUsers);
 router.get("/user",UserController.getUserById);
