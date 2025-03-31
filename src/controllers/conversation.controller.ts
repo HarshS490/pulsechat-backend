@@ -124,8 +124,7 @@ class ConversationController {
   }
   static async getConversations(req:Request,res:Response){
     try {
-      // const currentUser = req.user!;
-      const {currentUser} = req.body; 
+      const currentUser = req.user!;
       const conversations = await prisma.conversationsOnUsers.findMany({
         where:{
           userId: currentUser.id,
@@ -153,7 +152,6 @@ class ConversationController {
                       name:true,
                     }
                   },
-
                 },
                 orderBy:{
                   createdAt:'desc'
@@ -168,7 +166,7 @@ class ConversationController {
           }
         },
       });
-
+      console.log(conversations);
       if(!conversations){
         return res.status(200).json({message: "No conversations found",status:200});
       }      
