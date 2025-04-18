@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken"
 const authMiddleWare = (req:Request,res:Response,next:NextFunction)=>{
   const authHeader = req.headers.authorization;
   if(authHeader===null || authHeader=== undefined){
+    console.log("sending user back");
     return res.status(401).json({status:401,message:"Unauthorized"});
   }
   const token = authHeader.split(" ")[1];
