@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { prisma } from "../config/prisma.js";
 
+const PAGE_SIZE = 30;
 
 interface CreatePayload {
   isGroup: boolean;
@@ -60,20 +61,8 @@ class ConversationController {
         where: {
           isGroup: false,
           AND: [
-            {
-              users: {
-                some: {
-                  userId: currentUser.id,
-                },
-              },
-            },
-            {
-              users: {
-                some: {
-                  userId: members[0],
-                },
-              },
-            },
+            { users: { some: { userId: currentUser.id } } },
+            { users: { some: { userId: members[0] } } },
             {
               users: {
                 every: {
@@ -122,62 +111,205 @@ class ConversationController {
       return res.status(500).json({ message: "Server Side Error!" });
     }
   }
-  static async getConversations(req:Request,res:Response){
+
+  static async getConversations(req: Request, res: Response) {
     try {
       const currentUser = req.user!;
       const conversations = await prisma.conversationsOnUsers.findMany({
-        where:{
+        where: {
           userId: currentUser.id,
         },
-        include:{
-          conversation:{
-            include:{
-              users:{
-                include:{
-                  user:{
-                    select:{
-                      id:true,
-                      email:true,
-                      name:true,
-                      image:true,
-                    }
-                  }
-                }
-              },
-              messages:{
-                take:1,
-                include:{
-                  createdBy:{
-                    select:{
-                      name:true,
-                    }
+        include: {
+          conversation: {
+            include: {
+              users: {
+                include: {
+                  user: {
+                    select: {
+                      id: true,
+                      email: true,
+                      name: true,
+                      image: true,
+                    },
                   },
                 },
-                orderBy:{
-                  createdAt:'desc'
-                }
-              }
-            }
+              },
+              messages: {
+                take: 1,
+                include: {
+                  createdBy: {
+                    select: {
+                      name: true,
+                    },
+                  },
+                },
+                orderBy: {
+                  createdAt: "desc",
+                },
+              },
+            },
           },
         },
-        orderBy:{
-          conversation:{
-            lastMessageAt:'asc',
-          }
+        orderBy: {
+          conversation: {
+            lastMessageAt: "asc",
+          },
         },
       });
       console.log(conversations);
-      if(!conversations){
-        return res.status(200).json({message: "No conversations found",status:200});
-      }      
+      if (!conversations) {
+        return res
+          .status(200)
+          .json({ message: "No conversations found", status: 200 });
+      }
 
-      return res.status(200).json({conversations,status:200});
+      return res.status(200).json({ conversations, status: 200 });
     } catch (error) {
-      return res.status(500).json({message:"Internal Server Error!",status:500});
+      return res
+        .status(500)
+        .json({ message: "Internal Server Error!", status: 500 });
     }
   }
-  static async getMessages(req:Request,res:Response){
 
+  static async getConversationById(req: Request, res: Response) {
+    try {
+      const { chatId } = req.body;
+      console.log("ChatID: ", chatId);
+      const conversation = await prisma.conversation.findFirst({
+        where: {
+          id: chatId,
+        },
+        include: {
+          users: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  image: true,
+                  email: true,
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+      });
+      return res.status(200).json({ conversation, status: 200 });
+    } catch (error) {
+      console.log(error);
+      return res
+        .status(500)
+        .json({ message: "Internal Server Error", status: 500 });
+    }
+  }
+
+  static async getMessages(req: Request, res: Response) {
+    try {
+      const { chatId, pageParam } = req.query;
+      console.log("chatid: ", chatId);
+      console.log("pageParam:", pageParam);
+      if (!chatId || typeof chatId !== "string") {
+        return res
+          .status(400)
+          .json({
+            message: "Bad Request: ChatId should be a string",
+            status: 400,
+          });
+      }
+
+      if (pageParam && typeof pageParam==="string") {
+        const messages = await prisma.message.findMany({
+          where: {
+            conversationId: chatId,
+          },
+          orderBy: {
+            updatedAt: "desc",
+          },
+          include: {
+            createdBy: {
+              select: {
+                name: true,
+                id: true,
+                email: true,
+                image: true,
+                createdAt: true,
+                updatedAt: true,
+              },
+            },
+          },
+          take: PAGE_SIZE,
+          skip: 1,
+          cursor: {
+            id: pageParam,
+          },
+        });
+        messages.reverse();
+        return res.status(200).json({ messages, status: 200 });
+      }
+      const messages = await prisma.message.findMany({
+        where: {
+          conversationId: chatId,
+        },
+        orderBy: {
+          updatedAt: "desc",
+        },
+        include: {
+          createdBy: {
+            select: {
+              name: true,
+              id: true,
+              email: true,
+              image: true,
+              createdAt: true,
+              updatedAt: true,
+            },
+          },
+        },
+        take: PAGE_SIZE,
+      });
+      messages.reverse();
+      console.log("messages length: ",messages.length)
+      return res.status(200).json({ messages, status: 200 });
+    } catch (error) {
+      return res
+        .status(500)
+        .json({ message: "Internal Server Error!", status: 500 });
+    }
+  }
+
+  static async sendMessage(req: Request, res: Response) {
+    try {
+      const { message, chatId } = req.body;
+      const currentUser = req.user!;
+      console.log("sending messages");
+      if (!currentUser) {
+        return res.status(401).json({ message: "Unauthorized!", status: 401 });
+      }
+      if (!chatId) {
+        return res.status(400).json({ message: "Bad Request", status: 400 });
+      }
+      const newMessage = await prisma.message.create({
+        data: {
+          body: message,
+          Conversation: {
+            connect: {
+              id: chatId,
+            },
+          },
+          createdBy: {
+            connect: {
+              id: currentUser.id,
+            },
+          },
+        },
+      });
+      return res.status(200).json({ message: newMessage, status: 200 });
+    } catch (error) {
+      console.log("sendMessage: ", error);
+      return res
+        .status(500)
+        .json({ message: "Internal Server Error", status: 500 });
+    }
   }
 }
 
