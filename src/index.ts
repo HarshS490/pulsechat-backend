@@ -1,25 +1,26 @@
 import express, { Application, Request, Response } from "express";
-import "dotenv/config";
+import { configDotenv } from "dotenv"; "dotenv/config";
 import cors from "cors";
 import router from "./routes/routes.js";
 import { Server } from "socket.io";
 import { createServer } from "http";
-import { setupSocket } from "./socket.js";
-import { createAdapter } from "@socket.io/redis-streams-adapter";
-import redisClient from "./config/redis.config.js";
+import { setUpSocketService } from "./socket.js";
+import { startMessageConsumer } from "./config/kafka.js";
+configDotenv();
 
 const app: Application = express();
 const PORT = process.env.PORT || 7000;
+startMessageConsumer();
+
 
 const server = createServer(app);
 export const io = new Server(server, {
   cors: {
     origin: "*",
   },
-  adapter: createAdapter(redisClient),
 });
 
-setupSocket(io);
+setUpSocketService(io);
 
 // * Middleware
 app.use(cors());
