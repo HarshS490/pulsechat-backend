@@ -4,7 +4,6 @@ import { produceMessage } from "./config/kafka.js";
 import { Redis } from "ioredis";
 
 interface CustomSocket extends Socket {
-
   room?: string;
 }
 
@@ -16,18 +15,25 @@ export enum Events {
 }
 
 export type SocketMessageType = {
-  body:string;
-  image:string|null;
+  body: string | null;
   chatId: string;
-  createdBy: string;
-  name: string;
-  createdAt : Date;
-}
+  image: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  public_id: string | null;
+  isEdited: boolean | null;
+  createdBy: {
+    id: string;
+    image: string | null;
+    name: string;
+    email: string;
+  };
+};
 
-let socketServiceInstance: SocketService | null = null; 
+let socketServiceInstance: SocketService | null = null;
 
 export function setUpSocketService(io: Server) {
-  if(socketServiceInstance) return;
+  if (socketServiceInstance) return;
   const _socketServiceInstance = new SocketService(io);
   socketServiceInstance = _socketServiceInstance;
 }
@@ -60,24 +66,27 @@ export class SocketService {
 
   //subscriber setup
   private setUpSubscriber() {
-    this.redisSubscriber.subscribe("chat-message",(err,count)=>{
-      if(err){
-        console.log("Failed to subscribe to redis channel: ",err);
-      }
-      else{
-        console.log(`Subscribed to Redis Channel : chat-message (count:${count})`)
-      }
-    })
-
-    this.redisSubscriber.on("message",async (channel: string, message: string) => {
-      if(channel==="chat-message"){
-
-        const { roomId, data } = JSON.parse(message);
-        this._io.to(roomId).emit(Events.MESSAGE, data);
-        await produceMessage(JSON.stringify(data));
-        console.log("message produced to kafka Broker");
+    this.redisSubscriber.subscribe("chat-message", (err, count) => {
+      if (err) {
+        console.log("Failed to subscribe to redis channel: ", err);
+      } else {
+        console.log(
+          `Subscribed to Redis Channel : chat-message (count:${count})`
+        );
       }
     });
+
+    this.redisSubscriber.on(
+      "message",
+      async (channel: string, message: string) => {
+        if (channel === "chat-message") {
+          const { roomId, data } = JSON.parse(message);
+          this._io.to(roomId).emit(Events.MESSAGE, data);
+          await produceMessage(JSON.stringify(data));
+          console.log("message produced to kafka Broker");
+        }
+      }
+    );
   }
 
   // publish a message to Redis
@@ -93,43 +102,14 @@ export class SocketService {
   private setUpHandlers() {
     this._io.on("connection", (socket: CustomSocket) => {
       // join the room
-      console.log("a socket connected : ",socket.id);
+      console.log("a socket connected : ", socket.id);
       socket.join(socket.room!);
-      
-      socket.on(Events.MESSAGE, async (data : SocketMessageType) => {
+
+      socket.on(Events.MESSAGE, async (data: SocketMessageType) => {
         try {
           const message = data;
-          // const newMessage = await prisma.message.create({
-          //   data: {
-          //     body: message.body,
-          //     Conversation: {
-          //       connect: {
-          //         id: message.chatId,
-          //       },
-          //     },
-          //     createdBy: {
-          //       connect: {
-          //         id: message.createdBy,
-          //       },
-          //     },
-          //   },
-          //   include: {
-          //     createdBy: {
-          //       select: {
-          //         name: true,
-          //         id: true,
-          //         email: true,
-          //         image: true,
-          //         createdAt: true,
-          //         updatedAt: true,
-          //       },
-          //     },
-          //   },
-          // });
-          // await produceMessage(message);
-          this.publishMessage(socket.room!,message);
-          // this._io.to(socket.room!).emit(Events.MESSAGE, newMessage);
-          // console.log("produced message to kafka broker");
+
+          this.publishMessage(socket.room!, message);
         } catch (error) {
           console.log(error);
         }

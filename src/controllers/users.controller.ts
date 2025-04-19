@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { prisma } from "../config/prisma.js";
 
+
 class UserController {
   static async getAllUsers(req: Request, res: Response) {
     // TODO: return paged Responses, front will use reactQuery so return responses according to that.

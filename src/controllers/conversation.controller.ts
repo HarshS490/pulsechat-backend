@@ -225,23 +225,29 @@ class ConversationController {
           orderBy: {
             updatedAt: "desc",
           },
-          include: {
+          select: {
             createdBy: {
               select: {
                 name: true,
                 id: true,
                 email: true,
                 image: true,
-                createdAt: true,
-                updatedAt: true,
               },
             },
+            body:true,
+            createdAt:true,
+            updatedAt:true,
+            id:true,
+            image:true,
+            isEdited:true,
+            public_id:true,
           },
           take: PAGE_SIZE,
           skip: 1,
           cursor: {
             id: pageParam,
           },
+          
         });
         messages.reverse();
         return res.status(200).json({ messages, status: 200 });
@@ -253,17 +259,22 @@ class ConversationController {
         orderBy: {
           updatedAt: "desc",
         },
-        include: {
+        select: {
           createdBy: {
             select: {
               name: true,
               id: true,
               email: true,
               image: true,
-              createdAt: true,
-              updatedAt: true,
             },
           },
+          body:true,
+          createdAt:true,
+          updatedAt:true,
+          id:true,
+          image:true,
+          isEdited:true,
+          public_id:true,
         },
         take: PAGE_SIZE,
       });

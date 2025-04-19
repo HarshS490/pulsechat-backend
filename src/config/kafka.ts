@@ -52,7 +52,7 @@ export async function startMessageConsumer() {
       const data = JSON.parse(stringData) as SocketMessageType;
       console.log(data);
       try {
-        const newMessage = await prisma.message.create({
+        const newMessage = prisma.message.create({
           data: {
             body: data.body,
             Conversation: {
@@ -62,25 +62,24 @@ export async function startMessageConsumer() {
             },
             createdBy: {
               connect: {
-                id: data.createdBy,
+                id: data.createdBy.id,
               },
             },
             createdAt: data.createdAt,
-          },
-          include: {
-            createdBy: {
-              select: {
-                name: true,
-                id: true,
-                email: true,
-                image: true,
-                createdAt: true,
-                updatedAt: true,
-              },
-            },
+            updatedAt: data.updatedAt,
           },
         });
         
+        const updateConversation = prisma.conversation.update({
+          where:{
+            id:data.chatId,
+          },
+          data:{
+            lastMessageAt: data.createdAt,
+          }
+        })
+
+        await prisma.$transaction([newMessage,updateConversation]);
       } catch (error) {
         console.log("Can't Consume Message from kafka.");
         pause();
