@@ -144,7 +144,7 @@ class ConversationController {
                   },
                 },
                 orderBy: {
-                  createdAt: "desc",
+                  updatedAt: "desc",
                 },
               },
             },
@@ -152,7 +152,7 @@ class ConversationController {
         },
         orderBy: {
           conversation: {
-            lastMessageAt: "asc",
+            lastMessageAt: "desc",
           },
         },
       });
@@ -250,6 +250,7 @@ class ConversationController {
           
         });
         messages.reverse();
+        // console.log(messages);
         return res.status(200).json({ messages, status: 200 });
       }
       const messages = await prisma.message.findMany({
@@ -279,6 +280,7 @@ class ConversationController {
         take: PAGE_SIZE,
       });
       messages.reverse();
+      // console.log(messages);
       console.log("messages length: ",messages.length)
       return res.status(200).json({ messages, status: 200 });
     } catch (error) {

@@ -91,7 +91,14 @@ class FriendController {
 
       const friendRequests = await prisma.friendRequest.findMany({
         where: {
-          receiverId: currentUser.id,
+          OR:[{
+            receiverId: currentUser.id,
+          },{
+            senderId: currentUser.id,
+          }],
+          NOT:{
+            status:'declined',
+          }
         },
         include: {
           sender: {
@@ -115,6 +122,9 @@ class FriendController {
             },
           },
         },
+        orderBy:{
+          updatedAt:'desc',
+        }
       });
 
       console.log(friendRequests);

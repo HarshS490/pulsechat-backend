@@ -12,6 +12,8 @@ export enum Events {
   CONNECT = "CONNECT",
   DISCONNECT = "disconnect",
   ERROR = "ERROR",
+  JOIN = "JOIN",
+  LEAVE = "LEAVE",
 }
 
 export type SocketMessageType = {
@@ -49,7 +51,6 @@ export class SocketService {
     this.redisClient = new Redis(url);
     this.redisSubscriber = new Redis(url);
     this.setUpSubscriber();
-    this.setUpMiddleware();
     this.setUpHandlers();
   }
 
@@ -81,7 +82,9 @@ export class SocketService {
       async (channel: string, message: string) => {
         if (channel === "chat-message") {
           const { roomId, data } = JSON.parse(message);
+          console.log("Trying to emit to room", roomId, "with sockets:", this._io.sockets.adapter.rooms.get(roomId));
           this._io.to(roomId).emit(Events.MESSAGE, data);
+          console.log("message emitted to users in room : ",roomId);
           await produceMessage(JSON.stringify(data));
           console.log("message produced to kafka Broker");
         }
@@ -103,17 +106,44 @@ export class SocketService {
     this._io.on("connection", (socket: CustomSocket) => {
       // join the room
       console.log("a socket connected : ", socket.id);
-      socket.join(socket.room!);
 
-      socket.on(Events.MESSAGE, async (data: SocketMessageType) => {
-        try {
-          const message = data;
-
-          this.publishMessage(socket.room!, message);
-        } catch (error) {
-          console.log(error);
+      socket.on(Events.JOIN, async (data) => {
+        if (!data.room) {
+          console.log("Room id not provided");
+          throw new Error("Room id not provided");
         }
+        socket.join(data.room);
       });
+
+      // socket.on(Events.LEAVE, async (data) => {
+      //   if (!data.room) {
+      //     console.log("room id not provided");
+      //     return;
+      //   }
+      //   socket.leave(data.room);
+      // });
+
+      socket.on(Events.JOIN, async (data, callback) => {
+        if (!data.room) return callback?.(new Error("Room not provided"));
+        socket.join(data.room);
+        console.log(`${socket.id} joined room ${data.room}`);
+        callback?.(); // Notify client that room join is complete
+      });
+
+      socket.on(
+        Events.MESSAGE,
+        async (data: { message: SocketMessageType; room: string }) => {
+          try {
+            console.log(data);
+            const { message, room } = data;
+
+            this.publishMessage(room, message);
+          } catch (error) {
+            console.log(error);
+          }
+        }
+      );
+
       socket.on(Events.DISCONNECT, () => {
         console.log("a user disconnected : ", socket.id);
       });
