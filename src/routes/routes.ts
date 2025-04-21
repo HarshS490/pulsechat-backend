@@ -14,6 +14,7 @@ router.get("/chats/all",authMiddleWare,ConversationController.getConversations);
 router.post("/chat/id",ConversationController.getConversationById);
 router.get("/chat/messages",authMiddleWare,ConversationController.getMessages);
 router.post("/chat/send/message",authMiddleWare,ConversationController.sendMessage);
+router.delete("/chat/message",authMiddleWare,ConversationController.deleteMessage);
 
 router.post("/friendrequest/send",authMiddleWare,FriendController.sendFriendRequest);
 router.get("/friend/requests",authMiddleWare,FriendController.getFriendRequests);
@@ -22,4 +23,6 @@ router.post("/friend/decline",authMiddleWare,FriendController.acceptFriendReques
 
 router.get("/users/all",authMiddleWare,UserController.getAllUsers);
 router.get("/user",UserController.getUserById);
+
+
 export default router;

@@ -166,16 +166,16 @@ class ConversationController {
       const ind = conversations.findIndex(
         (conversation) => conversation.conversation.users.length === 1
       );
-      
+
       let updatedList = conversations;
-      
+
       if (ind !== -1) {
         updatedList = [...conversations];
-        const [item] = updatedList.splice(ind, 1); 
+        const [item] = updatedList.splice(ind, 1);
         updatedList.unshift(item);
       }
 
-      return res.status(200).json({ conversations:updatedList, status: 200 });
+      return res.status(200).json({ conversations: updatedList, status: 200 });
     } catch (error) {
       return res
         .status(500)
@@ -331,6 +331,39 @@ class ConversationController {
       return res
         .status(500)
         .json({ message: "Internal Server Error", status: 500 });
+    }
+  }
+
+  static async deleteMessage(req: Request, res: Response) {
+    try {
+      const currentUser = req.user!;
+      const { messageId } = req.query;
+      console.log("deleting messages");
+      
+      if (!currentUser) {
+        console.log("unauthorized no session found");
+        return res.json({ message: "Unauthorized", status: 401 }).status(401);
+      }
+      if (!messageId) {
+        console.log("Bad Reqeust");
+        return res
+          .json({
+            message: "Bad Request : messageId is required ",
+            status: 400,
+          })
+          .status(400);
+      }
+
+      const deletedMessage = await prisma.message.delete({
+        where: {
+          id: messageId as string,
+        },
+      });
+
+      console.log(deletedMessage);
+      return res.status(200).json({ message: "Message Deleted", status: 200 });
+    } catch (error) {
+      return res.status(200).json({message:"Internal Server Error",status:500});
     }
   }
 }
