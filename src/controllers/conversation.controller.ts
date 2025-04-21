@@ -163,7 +163,19 @@ class ConversationController {
           .json({ message: "No conversations found", status: 200 });
       }
 
-      return res.status(200).json({ conversations, status: 200 });
+      const ind = conversations.findIndex(
+        (conversation) => conversation.conversation.users.length === 1
+      );
+      
+      let updatedList = conversations;
+      
+      if (ind !== -1) {
+        updatedList = [...conversations];
+        const [item] = updatedList.splice(ind, 1); 
+        updatedList.unshift(item);
+      }
+
+      return res.status(200).json({ conversations:updatedList, status: 200 });
     } catch (error) {
       return res
         .status(500)
@@ -209,15 +221,13 @@ class ConversationController {
       console.log("chatid: ", chatId);
       console.log("pageParam:", pageParam);
       if (!chatId || typeof chatId !== "string") {
-        return res
-          .status(400)
-          .json({
-            message: "Bad Request: ChatId should be a string",
-            status: 400,
-          });
+        return res.status(400).json({
+          message: "Bad Request: ChatId should be a string",
+          status: 400,
+        });
       }
 
-      if (pageParam && typeof pageParam==="string") {
+      if (pageParam && typeof pageParam === "string") {
         const messages = await prisma.message.findMany({
           where: {
             conversationId: chatId,
@@ -234,20 +244,19 @@ class ConversationController {
                 image: true,
               },
             },
-            body:true,
-            createdAt:true,
-            updatedAt:true,
-            id:true,
-            image:true,
-            isEdited:true,
-            public_id:true,
+            body: true,
+            createdAt: true,
+            updatedAt: true,
+            id: true,
+            image: true,
+            isEdited: true,
+            public_id: true,
           },
           take: PAGE_SIZE,
           skip: 1,
           cursor: {
             id: pageParam,
           },
-          
         });
         messages.reverse();
         // console.log(messages);
@@ -269,19 +278,19 @@ class ConversationController {
               image: true,
             },
           },
-          body:true,
-          createdAt:true,
-          updatedAt:true,
-          id:true,
-          image:true,
-          isEdited:true,
-          public_id:true,
+          body: true,
+          createdAt: true,
+          updatedAt: true,
+          id: true,
+          image: true,
+          isEdited: true,
+          public_id: true,
         },
         take: PAGE_SIZE,
       });
       messages.reverse();
       // console.log(messages);
-      console.log("messages length: ",messages.length)
+      console.log("messages length: ", messages.length);
       return res.status(200).json({ messages, status: 200 });
     } catch (error) {
       return res
