@@ -4,7 +4,6 @@ import { prisma } from "../config/prisma.js";
 
 class UserController {
   static async getAllUsers(req: Request, res: Response) {
-    // TODO: return paged Responses, front will use reactQuery so return responses according to that.
     try {
       const currentUser = req.user!;
       const query = req.query.query as string || "";
@@ -26,6 +25,7 @@ class UserController {
           image: true,
           createdAt: true,
           id: true,
+          friendOf:true
         },
         skip:(pageNumber-1)*PAGE_SIZE,
         take:PAGE_SIZE,

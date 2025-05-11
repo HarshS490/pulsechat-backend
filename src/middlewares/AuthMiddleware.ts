@@ -16,8 +16,8 @@ const authMiddleWare = (req:Request,res:Response,next:NextFunction)=>{
   jwt.verify(token,auth_secret,(err,user)=>{
     if(err) return res.status(401).json({status:401,message:"Unauthorized"});
     req.user = user as AuthUser;
+    next();
   });
-  next();
 }
 
 export {authMiddleWare};
